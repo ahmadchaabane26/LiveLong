@@ -1,7 +1,6 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode, } from "react";
 import { auth } from "../constants/firebaseConfig";
 import { User, onAuthStateChanged, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut,} from "firebase/auth";
-import AsyncStorage from "@react-native-async-storage/async-storage";
 
   
   // Define the shape of our AuthContext
