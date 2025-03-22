@@ -1,5 +1,9 @@
 {
   "dependencies": {
-    "firebase": "^11.5.0"
+    "@expo/vector-icons": "^14.0.4",
+    "@react-navigation/bottom-tabs": "^7.3.1",
+    "firebase": "^11.5.0",
+    "react-native-safe-area-context": "^5.3.0",
+    "react-native-screens": "^4.9.2"
   }
 }

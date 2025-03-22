@@ -1,59 +1,55 @@
-import React from 'react';
-import FontAwesome from '@expo/vector-icons/FontAwesome';
-import { Link, Tabs } from 'expo-router';
-import { Pressable } from 'react-native';
-
-import Colors from '@/constants/Colors';
-import { useColorScheme } from '@/components/useColorScheme';
-import { useClientOnlyValue } from '@/components/useClientOnlyValue';
-
-// You can explore the built-in icon families and icons on the web at https://icons.expo.fyi/
-function TabBarIcon(props: {
-  name: React.ComponentProps<typeof FontAwesome>['name'];
-  color: string;
-}) {
-  return <FontAwesome size={28} style={{ marginBottom: -3 }} {...props} />;
-}
+import { Tabs } from "expo-router";
+import { Ionicons } from "@expo/vector-icons";
+import { Pressable } from "react-native";
 
 export default function TabLayout() {
-  const colorScheme = useColorScheme();
-
   return (
     <Tabs
-      screenOptions={{
-        tabBarActiveTintColor: Colors[colorScheme ?? 'light'].tint,
-        // Disable the static render of the header on web
-        // to prevent a hydration error in React Navigation v6.
-        headerShown: useClientOnlyValue(false, true),
-      }}>
-      <Tabs.Screen
-        name="index"
-        options={{
-          title: 'Tab One',
-          tabBarIcon: ({ color }) => <TabBarIcon name="code" color={color} />,
-          headerRight: () => (
-            <Link href="/modal" asChild>
-              <Pressable>
-                {({ pressed }) => (
-                  <FontAwesome
-                    name="info-circle"
-                    size={25}
-                    color={Colors[colorScheme ?? 'light'].text}
-                    style={{ marginRight: 15, opacity: pressed ? 0.5 : 1 }}
-                  />
-                )}
-              </Pressable>
-            </Link>
-          ),
-        }}
-      />
-      <Tabs.Screen
-        name="two"
-        options={{
-          title: 'Tab Two',
-          tabBarIcon: ({ color }) => <TabBarIcon name="code" color={color} />,
-        }}
-      />
+      screenOptions={({ route, navigation }) => ({
+        tabBarActiveTintColor: "#facc15",
+        tabBarInactiveTintColor: "gray",
+        headerTitleAlign: "center",
+        headerLeft: () => <></>, // helps balance center alignment
+        headerRight: () => (
+          <Pressable
+            onPress={() => navigation.navigate("modal" as never)}
+            style={{ marginRight: 15 }}
+          >
+            <Ionicons name="person-circle-outline" size={26} color="#facc15" />
+          </Pressable>
+        ),
+        tabBarIcon: ({ color, size }) => {
+          let iconName = "";
+
+          switch (route.name) {
+            case "index":
+              iconName = "calendar-outline";
+              break;
+            case "exercises":
+              iconName = "fitness-outline";
+              break;
+            case "events":
+              iconName = "people-outline";
+              break;
+            case "questions":
+              iconName = "chatbubble-ellipses-outline";
+              break;
+            case "leaderboard":
+              iconName = "trophy-outline";
+              break;
+            default:
+              iconName = "ellipse-outline";
+          }
+
+          return <Ionicons name={iconName as any} size={size} color={color} />;
+        },
+      })}
+    >
+      <Tabs.Screen name="index" options={{ title: "Routine" }} />
+      <Tabs.Screen name="exercises" options={{ title: "Exercises" }} />
+      <Tabs.Screen name="events" options={{ title: "Events" }} />
+      <Tabs.Screen name="questions" options={{ title: "Journal" }} />
+      <Tabs.Screen name="leaderboard" options={{ title: "Leaderboard" }} />
     </Tabs>
   );
 }
