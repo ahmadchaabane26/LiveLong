@@ -23,10 +23,10 @@ export default function ExercisesScreen() {
       let prompt;
       if (showMentalSection) {
         prompt = `As a professional mental health and wellness coach, suggest a 15-20 minute mental wellness routine for someone wanting to focus on ${mentalFocus.toLowerCase()}. 
-        Include specific exercises or practices with brief instructions. Format as a bullet list.`;
+        Include specific exercises or practices with brief instructions. Format in a clean bullet list and do not ask for any further input as this will be used in a mobile app.`;
       } else {
-        prompt = `As a professional fitness trainer, suggest a 30-minute gym workout focusing on ${workoutFocus.toLowerCase()}. 
-        Include 5-6 specific exercises with brief instructions. Format as a bullet list.`;
+        prompt = `As a professional fitness trainer, suggest a gym workout focusing on ${workoutFocus.toLowerCase()}. 
+        Include 5-6 specific exercises with brief instructions. Format in a clean bullet list and do not ask for any further input as this will be used in a mobile app.`;
       }
       
       const response = await fetch('https://api.deepseek.com/v1/chat/completions', {
@@ -77,7 +77,7 @@ export default function ExercisesScreen() {
       
       {!showMentalSection ? (
         <>
-          <Text style={styles.sectionTitle}>What do you want to workout?</Text>
+          <Text style={styles.sectionTitle}>What do you want to workout on ?</Text>
           <View style={styles.optionsContainer}>
             {workoutOptions.map((option) => (
               <TouchableOpacity
