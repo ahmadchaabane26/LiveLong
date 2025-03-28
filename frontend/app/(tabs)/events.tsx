@@ -25,6 +25,7 @@ const EventsScreen = () => {
 
   // Create Event State
   const [title, setTitle] = useState("");
+  const [destination, setdestination] = useState("");
   const [description, setDescription] = useState("");
   const [date, setDate] = useState("");
   const [time, setTime] = useState("");
@@ -48,7 +49,7 @@ const EventsScreen = () => {
   }, []);
 
   const handleCreateEvent = async () => {
-    if (!title || !description || !date || !time || !location || !currentUser) {
+    if (!title || !description || !date || !time || !location || !currentUser || !destination) {
       Alert.alert("Missing Info", "Please fill in all fields.");
       return;
     }
@@ -57,16 +58,19 @@ const EventsScreen = () => {
       await addDoc(collection(db, "Events"), {
         title,
         description,
+        destination,
         date,
         time,
         location,
         createdBy: currentUser.uid,
+        createdByEmail: currentUser.email, // ✅ Add this line
         isPublic: true,
         createdAt: new Date().toISOString(),
       });
 
       Alert.alert("Event Created", "Your event was successfully created.");
       setTitle("");
+      setdestination("");
       setDescription("");
       setDate("");
       setTime("");
@@ -113,24 +117,35 @@ const EventsScreen = () => {
       <Text style={styles.header}>📅 Create an Event</Text>
       <TextInput
         style={styles.input}
+        placeholderTextColor="#000"
         placeholder="Event Title"
         value={title}
         onChangeText={setTitle}
       />
       <TextInput
         style={styles.input}
+        placeholderTextColor="#000"
+        placeholder="Destination"
+        value={destination}
+        onChangeText={setdestination}
+      />
+      <TextInput
+        style={styles.input}
+        placeholderTextColor="#000"
         placeholder="Description"
         value={description}
         onChangeText={setDescription}
       />
       <TextInput
         style={styles.input}
+        placeholderTextColor="#000"
         placeholder="Date (e.g., 2025-04-15)"
         value={date}
         onChangeText={setDate}
       />
       <TextInput
         style={styles.input}
+        placeholderTextColor="#000"
         placeholder="Time (e.g., 3:00 PM)"
         value={time}
         onChangeText={setTime}
@@ -153,9 +168,10 @@ const EventsScreen = () => {
             <View style={styles.eventCard}>
               <Text style={styles.eventTitle}>{item.title}</Text>
               <Text>{item.description}</Text>
+              <Text>{item.destination}</Text>
               <Text>{item.date} at {item.time}</Text>
               <Text style={{ fontStyle: "italic", color: "#555" }}>
-                ~Public Event
+                Created by: {item.createdByEmail || "Anonymous"}
               </Text>
               {/* Future: Add RSVP button here */}
             </View>
@@ -215,6 +231,7 @@ const styles = StyleSheet.create({
   input: {
     borderWidth: 1,
     borderColor: "#ccc",
+    
     borderRadius: 10,
     padding: 10,
     marginBottom: 10,
