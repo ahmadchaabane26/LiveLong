@@ -3,6 +3,7 @@ import { View, Text, Button, Alert, TouchableOpacity, StyleSheet } from "react-n
 import { useAuth } from "@/constants/firebaseAuth";
 import { useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
+import React from "react";
 
 export default function ProfileModal() {
   const { currentUser, logout } = useAuth();

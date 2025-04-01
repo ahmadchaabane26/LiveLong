@@ -56,7 +56,7 @@ export default function Questions() {
 
     const fetchData = async () => {
       const journalRef = doc(db, "All Users", currentUser.uid, "journal", todayKey);
-      const weeklyRef = doc(db, "All Users", currentUser.uid, "journal", weekkey);
+      const weeklyRef = doc(db, "All Users", currentUser.uid, "journal",  weekkey);
 
       const [journalSnap, weeklySnap] = await Promise.all([
         getDoc(journalRef),

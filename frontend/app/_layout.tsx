@@ -4,9 +4,13 @@ import { useEffect, useState } from "react";
 import { View, ActivityIndicator, Platform } from "react-native";
 import AuthProvider from "@/constants/firebaseAuth";
 import * as Location from "expo-location";
+import React from "react";
+import { setDoc, doc, getFirestore } from "firebase/firestore";
+import app from "@/constants/firebaseConfig";
 
 function ProtectedLayout() {
   const { currentUser, loading } = useAuth();
+  const db = getFirestore(app)
   const segments = useSegments();
   const router = useRouter();
 
@@ -19,6 +23,22 @@ function ProtectedLayout() {
         console.log("📍 Location permission denied");
       } else {
         console.log("📍 Location permission granted");
+      }
+      const currentLocation = await Location.getCurrentPositionAsync({});
+      const { latitude, longitude } = currentLocation.coords;
+      
+      if (currentUser?.uid) {
+        await setDoc(
+          doc(db, "All Users", currentUser.uid),
+          {
+            lastKnownLocation: {
+              latitude,
+              longitude,
+              updatedAt: new Date().toISOString(),
+            },
+          },
+          { merge: true } // Use merge so it doesn’t overwrite the full document
+        );
       }
       setLocationPermissionChecked(true);
     };

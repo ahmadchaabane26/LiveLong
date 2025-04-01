@@ -1,5 +1,6 @@
 import { View, Text, Button, StyleSheet } from "react-native";
 import { Link } from "expo-router";
+import React from "react";
 
 export default function Home() {
   return (

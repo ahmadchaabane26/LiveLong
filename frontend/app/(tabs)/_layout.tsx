@@ -1,6 +1,7 @@
 import { Tabs } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { Pressable } from "react-native";
+import React from "react";
 
 export default function TabLayout() {
   return (
