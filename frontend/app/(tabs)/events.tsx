@@ -68,7 +68,7 @@ const EventsScreen = () => {
         location, // Store the location with latitude and longitude
         createdBy: currentUser.uid,
         createdByEmail: currentUser.email,
-        rsvps: [],  // Initialize empty RSVPs array
+        rsvps: [currentUser.uid],  // Initialize empty RSVPs array
         isPublic: true,
         createdAt: new Date().toISOString(),
       });
@@ -213,7 +213,7 @@ const EventsScreen = () => {
             <Text>{item.destination}</Text>
             <Text>{item.date} at {item.time}</Text>
             <Text style={styles.rsvpCount}>
-              {item.rsvps?.length || 1} {item.rsvps?.length === 1 ? "person are" : "people is"} going
+              {item.rsvps?.length || 1} {item.rsvps?.length === 1 ? "person is" : "people are"} going
             </Text>
 
           
@@ -290,11 +290,12 @@ const EventsScreen = () => {
       }
   
       fetchUserEvents(); // Re-fetch the user's events after RSVP
-      fetchNearbyEvents(); // Re-fetch nearby events
+      fetchRsvpdEvents(); // Re-fetch RSVP'd events after RSVP
     } catch (err: any) {
       Alert.alert("Error", err.message);
     }
   };
+  
   
   const fetchRsvpdEvents = async () => {
     if (!currentUser) return;
@@ -325,7 +326,7 @@ const EventsScreen = () => {
             <Text>{item.destination}</Text>
             <Text>{item.date} at {item.time}</Text>
             <Text style={styles.rsvpCount}>
-              {item.rsvps?.length || 0} {item.rsvps?.length === 1 ? "person is" : "people are"} going
+              {item.rsvps?.length || 1} {item.rsvps?.length === 1 ? "person is" : "people are"} going
             </Text>
             {/* Cancel RSVP Button */}
             {item.rsvps?.includes(currentUser?.uid) && (
