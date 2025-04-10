@@ -1,13 +1,15 @@
 // app/modal.tsx
-import { View, Text, Button, Alert, TouchableOpacity, StyleSheet } from "react-native";
+import { View, Text, Button, Alert, TouchableOpacity, StyleSheet, TextInput } from "react-native";
 import { useAuth } from "@/constants/firebaseAuth";
 import { useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
-import React from "react";
+import React, { useState } from "react";
 
 export default function ProfileModal() {
   const { currentUser, logout } = useAuth();
   const router = useRouter();
+  const [isSettingsVisible, setIsSettingsVisible] = useState(false);
+  const [friendEmail, setFriendEmail] = useState("");
 
   const handleLogout = async () => {
     try {
@@ -17,6 +19,11 @@ export default function ProfileModal() {
     } catch (error: any) {
       Alert.alert("Logout failed", error.message);
     }
+  };
+
+  const handleAddFriend = () => {
+    // You can implement a function to search for friends by email here
+    router.push("/modal/friends")
   };
 
   return (
@@ -29,7 +36,20 @@ export default function ProfileModal() {
 
         {/* Modal Content */}
         <Text style={styles.title}>👤 Profile</Text>
-        <Text style={styles.emailText}>Email: {currentUser?.email}</Text>
+
+        {/* Settings Button */}
+        {/* <TouchableOpacity onPress={() => router.push("/modal/settings")} style={styles.settingsButton}>
+          <Text style={styles.settingsText}>Settings</Text>
+          <Ionicons name="chevron-forward" size={20} color="#333" />
+        </TouchableOpacity> */}
+
+        {/* Add Friend Button */}
+        <TouchableOpacity onPress={() => router.push("/modal/friends")} style={styles.addFriendButton}>
+          <Text style={styles.addFriendText}>Add Friends</Text>
+          <Ionicons name="person-add" size={20} color="#333" />
+        </TouchableOpacity>
+
+        {/* Log Out Button */}
         <Button title="Log Out" onPress={handleLogout} />
       </View>
     </View>
@@ -67,8 +87,26 @@ const styles = StyleSheet.create({
     fontWeight: "bold",
     marginBottom: 20,
   },
-  emailText: {
-    marginBottom: 20,
-    fontSize: 16,
+  settingsButton: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    width: "100%",
+    marginVertical: 10,
+  },
+  settingsText: {
+    fontSize: 18,
+    color: "#333",
+  },
+  addFriendButton: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    width: "100%",
+    marginVertical: 10,
+  },
+  addFriendText: {
+    fontSize: 18,
+    color: "#333",
   },
 });
