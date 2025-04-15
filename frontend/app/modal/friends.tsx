@@ -1,138 +1,262 @@
-import React, { useState } from "react";
-import 'react-native-get-random-values'; 
+import React, { useState, useEffect } from "react";
+import 'react-native-get-random-values';
 import {
   View,
   Text,
-  TextInput,
   Button,
-  TouchableOpacity,
   StyleSheet,
   Alert,
+  TouchableOpacity,
+  Modal,
+  TextInput,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import { useAuth } from "@/constants/firebaseAuth";
-import { getFirestore, collection, query, where, getDocs, doc, getDoc, setDoc, updateDoc } from "firebase/firestore";
-import app from "@/constants/firebaseConfig"; 
+import { getFirestore, collection, query, where, getDocs, doc, getDoc, setDoc, updateDoc, deleteDoc } from "firebase/firestore";
+import app from "@/constants/firebaseConfig";
 
-export default function AddFriends() {
+export default function FriendsPage() {
   const { currentUser } = useAuth();
   const router = useRouter();
-  const [friendEmail, setFriendEmail] = useState("");
-  const [userToAdd, setUserToAdd] = useState<any>(null); // To store the user found by email
-
   const firestore = getFirestore(app); // Initialize Firestore
 
-  // Handle Search Friend by Email
-  const handleSearchFriend = async () => {
-    if (!friendEmail) {
-      Alert.alert("Error", "Please enter a valid email.");
-      return;
-    }
-  
+  const [pendingRequests, setPendingRequests] = useState<any[]>([]);
+  const [friends, setFriends] = useState<any[]>([]);
+  const [addFriendEmail, setAddFriendEmail] = useState("");
+  const [showAddFriendModal, setShowAddFriendModal] = useState(false);
+
+  // Fetch Pending Friend Requests
+  // Fetch pending friend requests
+  const fetchPendingRequests = async () => {
+    if (!currentUser) return;
+
     try {
-      // Normalize the email for case-insensitive search
-      const normalizedEmail = friendEmail.trim().toLowerCase();
-  
-      // Reference to 'All Users' collection
+      const pendingRef = collection(firestore, "users", currentUser.uid, "pendingRequests");
+      const querySnapshot = await getDocs(pendingRef);
+      
+      const requests = await Promise.all(
+        querySnapshot.docs.map(async (docSnapshot) => {
+          const senderId = docSnapshot.id;
+          const senderDoc = await getDoc(doc(firestore, "All Users", senderId));
+          return {
+            id: senderId,
+            email: senderDoc.data()?.email || "Unknown",
+          };
+        })
+      );
+
+      setPendingRequests(requests);
+    } catch (error) {
+      console.error("Error fetching pending requests:", error);
+    }
+  };
+
+  // Fetch friends list
+  const fetchFriends = async () => {
+    if (!currentUser) return;
+
+    try {
+      const friendsRef = collection(firestore, "users", currentUser.uid, "friends");
+      const querySnapshot = await getDocs(friendsRef);
+
+      const friendsList = await Promise.all(
+        querySnapshot.docs.map(async (docSnapshot) => {
+          const friendId = docSnapshot.id;
+          const friendDoc = await getDoc(doc(firestore, "All Users", friendId));
+          return {
+            id: friendId,
+            email: friendDoc.data()?.email || "Unknown",
+          };
+        })
+      );
+
+      setFriends(friendsList);
+    } catch (error) {
+      console.error("Error fetching friends:", error);
+    }
+  };
+
+  // Send friend request
+  const handleSendFriendRequest = async () => {
+    if (!currentUser || !addFriendEmail) return;
+
+    try {
+      const normalizedEmail = addFriendEmail.trim().toLowerCase();
+
+      // Query Firestore for the user by email
       const userRef = collection(firestore, "All Users");
-  
-      // Query to find user by email
       const q = query(userRef, where("email", "==", normalizedEmail));
       const querySnapshot = await getDocs(q);
-  
-      // If no user is found, show alert
-      if (querySnapshot.empty) {
-        Alert.alert("User not found", `No user found with email: ${friendEmail}`);
-        return;
-      }
-  
-      // Assuming the first user found is the one to be added
-      const userDoc = querySnapshot.docs[0]; // Access the first user found
-      setUserToAdd(userDoc.data()); // Store the user data
-      Alert.alert("User Found", `User: ${userDoc.data().email} found. You can now add them as a friend.`);
-    } catch (error) {
-      console.error("Error querying user:", error);  // Log the error for debugging
-      Alert.alert("Error", "Something went wrong while searching for the user.");
-    }
-  };
-  
 
-  // Handle Adding Friend Logic
-  const handleAddFriend = async (friendId: string) => {
-    if (!currentUser) {
-      Alert.alert("Error", "You need to be logged in to add friends.");
-      return;
-    }
-  
-    try {
-      const userRef = doc(firestore, "users", currentUser.uid); // Reference to the current user's document
-      const friendRef = doc(firestore, "users", friendId); // Reference to the friend's document
-  
-      // Get the current user's and friend's data
-      const userSnapshot = await getDoc(userRef);
-      const friendSnapshot = await getDoc(friendRef);
-  
-      const userData = userSnapshot.data();
-      const friendData = friendSnapshot.data();
-  
-      // Ensure friends arrays are always initialized as empty arrays if undefined
-      const userFriends = Array.isArray(userData?.friends) ? userData?.friends : [];
-      const friendFriends = Array.isArray(friendData?.friends) ? friendData?.friends : [];
-  
-      // Check if the friend is already added
-      if (userFriends.includes(friendId)) {
-        Alert.alert("Error", "You are already friends with this user.");
+
+      if (querySnapshot.empty) {
+        Alert.alert("Error", "User not found");
         return;
       }
-  
-      // Add the friend to the user's friends array and vice versa
-      await updateDoc(userRef, {
-        friends: [...userFriends, friendId], // Add friendId to current user's friends array
-      });
-  
-      await updateDoc(friendRef, {
-        friends: [...friendFriends, currentUser.uid], // Add currentUser's UID to friend's friends array
-      });
-  
-      Alert.alert("Friend Added", "You are now friends with this user.");
-    } catch (err: any) {
-      Alert.alert("Error", err.message);
+
+      const receiverDoc = querySnapshot.docs[0];
+      const receiverId = receiverDoc.id;
+
+      // Check if request already exists
+      const existingRequest = await getDoc(
+        doc(firestore, "users", receiverId, "pendingRequests", currentUser.uid)
+      );
+
+      if (existingRequest.exists()) {
+        Alert.alert("Error", "Request already sent");
+        return;
+      }
+
+      // Create request
+      await setDoc(
+        doc(firestore, "users", receiverId, "pendingRequests", currentUser.uid),
+        { createdAt: new Date() }
+      );
+
+      Alert.alert("Success", "Friend request sent");
+      setShowAddFriendModal(false);
+    } catch (error) {
+      console.error("Error sending request:", error);
+      Alert.alert("Error", "Failed to send request");
     }
   };
-  
+
+  // Accept friend request
+  const handleAcceptRequest = async (senderId: string) => {
+    if (!currentUser) return;
+
+    try {
+      // Remove from pending requests
+      await deleteDoc(
+        doc(firestore, "users", currentUser.uid, "pendingRequests", senderId)
+      );
+
+      // Add to friends list for both users
+      await setDoc(
+        doc(firestore, "users", currentUser.uid, "friends", senderId),
+        { since: new Date() }
+      );
+      await setDoc(
+        doc(firestore, "users", senderId, "friends", currentUser.uid),
+        { since: new Date() }
+      );
+
+      fetchPendingRequests();
+      fetchFriends();
+    } catch (error) {
+      console.error("Error accepting request:", error);
+    }
+  };
+
+  // Decline friend request
+  const handleDeclineRequest = async (senderId: string) => {
+    if (!currentUser) return;
+
+    try {
+      await deleteDoc(
+        doc(firestore, "users", currentUser.uid, "pendingRequests", senderId)
+      );
+      fetchPendingRequests();
+    } catch (error) {
+      console.error("Error declining request:", error);
+    }
+  };
+
+  // Remove friend
+  const handleRemoveFriend = async (friendId: string) => {
+    if (!currentUser) return;
+
+    try {
+      await deleteDoc(
+        doc(firestore, "users", currentUser.uid, "friends", friendId)
+      );
+      await deleteDoc(
+        doc(firestore, "users", friendId, "friends", currentUser.uid)
+      );
+      fetchFriends();
+    } catch (error) {
+      console.error("Error removing friend:", error);
+    }
+  };
+
+
+  useEffect(() => {
+    if (currentUser) {
+      fetchPendingRequests();
+      fetchFriends();
+    }
+  }, [currentUser]);
 
   return (
     <View style={styles.container}>
-        <View style={styles.modal}>
-      <TouchableOpacity onPress={() => router.back()} style={styles.closeButton}>
-        <Ionicons name="close" size={28} color="#333" />
-      </TouchableOpacity>
+      <View style={styles.modal}>
+        <TouchableOpacity onPress={() => router.back()} style={styles.closeButton}>
+          <Ionicons name="close" size={28} color="#333" />
+        </TouchableOpacity>
 
-      <Text style={styles.title}>Add a Friend</Text>
+        <Text style={styles.title}>Friends</Text>
 
-      {/* Email Input */}
-      <TextInput
-        value={friendEmail}
-        onChangeText={setFriendEmail}
-        placeholder="Enter friend's email"
-        keyboardType="email-address"
-        style={styles.input}
-      />
-      <Button title="Search" onPress={handleSearchFriend} color="#4CAF50" />
+        {/* Add Friend Button in the Top Right */}
+        <TouchableOpacity
+          style={styles.addButton}
+          onPress={() => setShowAddFriendModal(true)}
+        >
+          <Ionicons name="person-add" size={28} color="#333" />
+        </TouchableOpacity>
 
-      {userToAdd && (
-        <View style={styles.userInfo}>
-          <Text style={styles.userText}>User Found</Text>
-          <Text style={styles.userDetail}>Email: {userToAdd.email}</Text>
-          <Button
-                title="Add Friend"
-                onPress={() => handleAddFriend(userToAdd?.uid)}  // Pass the friendId using an arrow function
-                color="#2196F3"
-                />
-        </View>
-      )}
+        {/* Pending Friend Requests Section */}
+        <Text style={styles.subtitle}>Pending Friend Requests:</Text>
+        {pendingRequests.length > 0 ? (
+          pendingRequests.map((request) => (
+            <View key={request.id} style={styles.friendRequest}>
+              <Text style={styles.userDetail}>Email: {request.email}</Text>
+              <View style={styles.buttonRow}>
+                <Button title="Accept" onPress={() => handleAcceptRequest(request.id)} color="#4CAF50" />
+                <Button title="Decline" onPress={() => handleDeclineRequest(request.id)} color="#FF5722" />
+              </View>
+            </View>
+          ))
+        ) : (
+          <Text>No pending friend requests.</Text>
+        )}
+
+        {/* Friends List Section */}
+        <Text style={styles.subtitle}>Friends:</Text>
+        {friends.length > 0 ? (
+          friends.map((friend) => (
+            <View key={friend.id} style={styles.friend}>
+              <Text style={styles.userDetail}>Email: {friend.email}</Text>
+              <Button title="Remove Friend" onPress={() => handleRemoveFriend(friend.id)} color="#2196F3" />
+            </View>
+          ))
+        ) : (
+          <Text>No friends added yet.</Text>
+        )}
       </View>
+
+      {/* Add Friend Modal */}
+      <Modal
+        visible={showAddFriendModal}
+        onRequestClose={() => setShowAddFriendModal(false)}
+        animationType="slide"
+        transparent={true}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <Text style={styles.modalTitle}>Add a Friend</Text>
+            <TextInput
+              value={addFriendEmail}
+              onChangeText={setAddFriendEmail}
+              placeholder="Enter friend's email"
+              keyboardType="email-address"
+              style={styles.input}
+            />
+            <Button title="Send Friend Request" onPress={handleSendFriendRequest} color="#4CAF50" />
+            <Button title="Cancel" onPress={() => setShowAddFriendModal(false)} color="#FF5722" />
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 }
@@ -150,6 +274,11 @@ const styles = StyleSheet.create({
     position: "absolute",
     top: 20,
     right: 20,
+  },
+  addButton: {
+    position: "absolute",
+    top: 20,
+    right: 60,
   },
   modal: {
     width: "100%",
@@ -169,6 +298,44 @@ const styles = StyleSheet.create({
     marginBottom: 20,
     color: "#333",
   },
+  subtitle: {
+    fontSize: 20,
+    fontWeight: "bold",
+    marginTop: 20,
+  },
+  friendRequest: {
+    marginBottom: 15,
+  },
+  userDetail: {
+    fontSize: 16,
+    marginBottom: 10,
+    color: "#333",
+  },
+  friend: {
+    marginBottom: 15,
+  },
+  buttonRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    width: "100%",
+  },
+  modalOverlay: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    backgroundColor: "rgba(0,0,0,0.5)",
+  },
+  modalContent: {
+    width: "80%",
+    backgroundColor: "#fff",
+    borderRadius: 10,
+    padding: 20,
+    alignItems: "center",
+  },
+  modalTitle: {
+    fontSize: 24,
+    marginBottom: 20,
+  },
   input: {
     width: "100%",
     padding: 12,
@@ -176,28 +343,6 @@ const styles = StyleSheet.create({
     borderColor: "#ccc",
     marginBottom: 15,
     borderRadius: 8,
-    backgroundColor: "#fff",
     fontSize: 16,
-  },
-  userInfo: {
-    marginTop: 30,
-    width: "100%",
-    alignItems: "center",
-    padding: 15,
-    borderWidth: 1,
-    borderColor: "#ddd",
-    borderRadius: 8,
-    backgroundColor: "#fff",
-  },
-  userText: {
-    fontSize: 20,
-    fontWeight: "bold",
-    color: "#4CAF50",
-    marginBottom: 10,
-  },
-  userDetail: {
-    fontSize: 16,
-    marginBottom: 20,
-    color: "#333",
   },
 });

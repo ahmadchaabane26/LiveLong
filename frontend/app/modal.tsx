@@ -38,10 +38,10 @@ export default function ProfileModal() {
         <Text style={styles.title}>👤 Profile</Text>
 
         {/* Settings Button */}
-        {/* <TouchableOpacity onPress={() => router.push("/modal/settings")} style={styles.settingsButton}>
+        <TouchableOpacity onPress={() => router.push("/modal/settings")} style={styles.settingsButton}>
           <Text style={styles.settingsText}>Settings</Text>
           <Ionicons name="chevron-forward" size={20} color="#333" />
-        </TouchableOpacity> */}
+        </TouchableOpacity>
 
         {/* Add Friend Button */}
         <TouchableOpacity onPress={() => router.push("/modal/friends")} style={styles.addFriendButton}>

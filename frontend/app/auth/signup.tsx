@@ -33,7 +33,7 @@ export default function SignupScreen() {
       await setDoc(doc(db, "All Users", user.uid), {
         email: user.email,
         createdAt: new Date().toISOString(),
-        friends: [],  // Initialize friends as an empty array
+        friendships: [],  // Initialize friends as an empty array
       })
         .then(() => console.log("✅ Firestore: User added to 'All Users'"))
         .catch((err) => console.log("Firestore error:", err));
