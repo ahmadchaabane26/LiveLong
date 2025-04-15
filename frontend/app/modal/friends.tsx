@@ -32,7 +32,7 @@ export default function FriendsPage() {
     if (!currentUser) return;
 
     try {
-      const pendingRef = collection(firestore, "users", currentUser.uid, "pendingRequests");
+      const pendingRef = collection(firestore, "All Users", currentUser.uid, "pendingRequests");
       const querySnapshot = await getDocs(pendingRef);
       
       const requests = await Promise.all(
@@ -57,7 +57,7 @@ export default function FriendsPage() {
     if (!currentUser) return;
 
     try {
-      const friendsRef = collection(firestore, "users", currentUser.uid, "friends");
+      const friendsRef = collection(firestore, "All Users", currentUser.uid, "friends");
       const querySnapshot = await getDocs(friendsRef);
 
       const friendsList = await Promise.all(
@@ -100,7 +100,7 @@ export default function FriendsPage() {
 
       // Check if request already exists
       const existingRequest = await getDoc(
-        doc(firestore, "users", receiverId, "pendingRequests", currentUser.uid)
+        doc(firestore, "All Users", receiverId, "pendingRequests", currentUser.uid)
       );
 
       if (existingRequest.exists()) {
@@ -110,7 +110,7 @@ export default function FriendsPage() {
 
       // Create request
       await setDoc(
-        doc(firestore, "users", receiverId, "pendingRequests", currentUser.uid),
+        doc(firestore, "All Users", receiverId, "pendingRequests", currentUser.uid),
         { createdAt: new Date() }
       );
 
@@ -129,16 +129,16 @@ export default function FriendsPage() {
     try {
       // Remove from pending requests
       await deleteDoc(
-        doc(firestore, "users", currentUser.uid, "pendingRequests", senderId)
+        doc(firestore, "All Users", currentUser.uid, "pendingRequests", senderId)
       );
 
       // Add to friends list for both users
       await setDoc(
-        doc(firestore, "users", currentUser.uid, "friends", senderId),
+        doc(firestore, "All Users", currentUser.uid, "friends", senderId),
         { since: new Date() }
       );
       await setDoc(
-        doc(firestore, "users", senderId, "friends", currentUser.uid),
+        doc(firestore, "All Users", senderId, "friends", currentUser.uid),
         { since: new Date() }
       );
 
@@ -155,7 +155,7 @@ export default function FriendsPage() {
 
     try {
       await deleteDoc(
-        doc(firestore, "users", currentUser.uid, "pendingRequests", senderId)
+        doc(firestore, "All Users", currentUser.uid, "pendingRequests", senderId)
       );
       fetchPendingRequests();
     } catch (error) {
@@ -169,10 +169,10 @@ export default function FriendsPage() {
 
     try {
       await deleteDoc(
-        doc(firestore, "users", currentUser.uid, "friends", friendId)
+        doc(firestore, "All Users", currentUser.uid, "friends", friendId)
       );
       await deleteDoc(
-        doc(firestore, "users", friendId, "friends", currentUser.uid)
+        doc(firestore, "All Users", friendId, "friends", currentUser.uid)
       );
       fetchFriends();
     } catch (error) {
