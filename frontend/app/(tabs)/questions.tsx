@@ -9,7 +9,7 @@ import {
   Alert,
   ScrollView,
 } from "react-native";
-import { format, startOfWeek } from "date-fns";
+import { format, startOfWeek, addDays } from "date-fns";
 import { getFirestore, doc, setDoc, getDoc } from "firebase/firestore";
 import { useAuth } from "@/constants/firebaseAuth";
 import app from "@/constants/firebaseConfig";
@@ -33,8 +33,7 @@ const randomFrom = (arr: string[]) => arr[Math.floor(Math.random() * arr.length)
 export default function Questions() {
   const { currentUser } = useAuth();
   const todayKey = format(new Date(), "yyyy-MM-dd");
-  const weekkey = format(new Date(), "yyyy-MM")
-  const weekKey = format(startOfWeek(new Date(), { weekStartsOn: 1 }), "yyyy-MM-dd");
+  const weekkey = format(new Date(), "yyyy-MM");
 
   const [weeklyGoals, setWeeklyGoals] = useState<string[]>([]);
   const [dailyGoals, setDailyGoals] = useState([
@@ -50,40 +49,70 @@ export default function Questions() {
   const [dailyQuestion, setDailyQuestion] = useState("");
   const [dailyExercise, setDailyExercise] = useState("");
   const [loading, setLoading] = useState(true);
+  const [streak, setStreak] = useState(0); // Track the streak
 
   useEffect(() => {
     if (!currentUser) return;
 
     const fetchData = async () => {
-      const journalRef = doc(db, "All Users", currentUser.uid, "journal", todayKey);
-      const weeklyRef = doc(db, "All Users", currentUser.uid, "journal",  weekkey);
+      try {
+        const journalRef = doc(db, "All Users", currentUser.uid, "journal", todayKey);
+        const weeklyRef = doc(db, "All Users", currentUser.uid, "journal",  weekkey);
+  
+        const [journalSnap, weeklySnap] = await Promise.all([
+          getDoc(journalRef),
+          getDoc(weeklyRef),
+        ]);
+  
+        if (journalSnap.exists()) {
+          const data = journalSnap.data();
+          setEntry(data.entry || "");
+          setAnswer(data.answer || "");
+          setDailyGoals(data.checklist || []);
+          setExerciseCompleted(data.dailyExercise?.completed || false);
+          setSpiritualWin(data.spiritualWin || "");
+          setMentalWin(data.mentalWin || "");
+          setPhysicalWin(data.physicalWin || "");
+          setDailyQuestion(data.question || randomFrom(dailyQuestions));
+          setDailyExercise(data.dailyExercise?.name || randomFrom(dailyExercises));
+        } else {
+          setDailyQuestion(randomFrom(dailyQuestions));
+          setDailyExercise(randomFrom(dailyExercises));
+        }
+  
+        if (weeklySnap.exists()) {
+          setWeeklyGoals(weeklySnap.data().goals || []);
+        }
 
-      const [journalSnap, weeklySnap] = await Promise.all([
-        getDoc(journalRef),
-        getDoc(weeklyRef),
-      ]);
+        const streakRef = doc(db, "All Users", currentUser.uid);
+        const streakSnap = await getDoc(streakRef);
+        if (streakSnap.exists()) {
+          const streakData = streakSnap.data();
+          const lastEntryDate = streakData?.lastEntryDate;
+          const currentStreak = streakData?.streak || 0;
 
-      if (journalSnap.exists()) {
-        const data = journalSnap.data();
-        setEntry(data.entry || "");
-        setAnswer(data.answer || "");
-        setDailyGoals(data.checklist || []);
-        setExerciseCompleted(data.dailyExercise?.completed || false);
-        setSpiritualWin(data.spiritualWin || "");
-        setMentalWin(data.mentalWin || "");
-        setPhysicalWin(data.physicalWin || "");
-        setDailyQuestion(data.question || randomFrom(dailyQuestions));
-        setDailyExercise(data.dailyExercise?.name || randomFrom(dailyExercises));
-      } else {
-        setDailyQuestion(randomFrom(dailyQuestions));
-        setDailyExercise(randomFrom(dailyExercises));
+          // Check if a day has been missed
+          if (lastEntryDate && lastEntryDate !== todayKey) {
+            const lastDate = new Date(lastEntryDate);
+            const diff = Math.floor((new Date().getTime() - lastDate.getTime()) / (1000 * 3600 * 24));
+
+            // Reset streak if more than one day missed
+            if (diff > 1) {
+              setStreak(0);
+            } else {
+              setStreak(currentStreak + 1);
+            }
+          } else {
+            setStreak(currentStreak);
+          }
+        }
+
+        setLoading(false);
+      } catch (error) {
+        console.error("Error fetching journal data:", error);
+        setLoading(false); // Ensure loading is set to false on error
+        Alert.alert("Error", "There was an issue loading your journal data.");
       }
-
-      if (weeklySnap.exists()) {
-        setWeeklyGoals(weeklySnap.data().goals || []);
-      }
-
-      setLoading(false);
     };
 
     fetchData();
@@ -120,6 +149,10 @@ export default function Questions() {
           goals: weeklyGoals,
           updatedAt: new Date().toISOString(),
         }),
+        // Save streak in the user document
+        setDoc(doc(db, "All Users", currentUser.uid), {
+          streak: streak + 1, // Increment the streak
+        }, { merge: true }), // Merge to keep existing data and just update the streak
       ]);
 
       Alert.alert("Saved", "Journal and weekly goals saved!");
@@ -260,6 +293,7 @@ export default function Questions() {
     </ScrollView>
   );
 }
+
 
 const styles = StyleSheet.create({
   container: { flexGrow: 1, padding: 20, paddingTop: 40 },
