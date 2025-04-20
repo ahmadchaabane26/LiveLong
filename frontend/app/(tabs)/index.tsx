@@ -1,17 +1,16 @@
 import React, { useEffect, useState } from "react";
-import { View, Text, StyleSheet, Button, ScrollView, TouchableOpacity, TextInput } from "react-native";
-import { getFirestore, collection, getDocs, doc, getDoc, setDoc } from "firebase/firestore";
+import { View, Text, StyleSheet, Button, ScrollView, TouchableOpacity } from "react-native";
+import { getFirestore, collection, getDocs, setDoc, doc, getDoc } from "firebase/firestore";
 import { useAuth } from "@/constants/firebaseAuth";
 import app from "@/constants/firebaseConfig";
 import { format } from "date-fns";
-
 
 const db = getFirestore(app);
 
 // Define the Mood type to restrict possible values
 type Mood = "Energetic" | "Tired" | "Sick";
 
-const index = () => {
+const Index = () => {
   const { currentUser } = useAuth();  // Ensure this correctly gets the user
   const [friendsList, setFriendsList] = useState<any[]>([]); // Correctly initializing friendsList state
   const [leaderboard, setLeaderboard] = useState<any[]>([]);
@@ -63,6 +62,17 @@ const index = () => {
         setWeeklyGoals(weeklySnap.data().goals || []);
       }
       
+      // Fetch leaderboard data and sort by streak
+      const leaderboardRef = collection(db, "All Users");
+      const leaderboardSnapshot = await getDocs(leaderboardRef);
+      const leaderboardData = leaderboardSnapshot.docs.map(doc => ({
+        userId: doc.id,
+        email: doc.data().email, // Get email from the user document
+        streak: doc.data().streak || 0, // If streak is undefined, set to 0
+      }));
+
+      setLeaderboard(leaderboardData.sort((a, b) => b.streak - a.streak));  // Sort by streak in descending order
+
       setLoading(false);
     };
 
@@ -84,6 +94,7 @@ const index = () => {
     updatedGoals[index].done = !updatedGoals[index].done;
     setDailyGoals(updatedGoals);
   };
+
   // Find the user's rank in the leaderboard
   const getUserRank = () => {
     const userRank = leaderboard.findIndex(user => user.userId === currentUser?.uid) + 1;  // Find index of user and add 1 to get rank
@@ -93,6 +104,7 @@ const index = () => {
       return "You are not on the leaderboard yet";  // Rank not found
     }
   };
+
   return (
     <View style={{ flex: 1, paddingTop: 40 }}>
       <Text style={styles.header}>How are you feeling today?</Text>
@@ -135,14 +147,13 @@ const index = () => {
       <ScrollView>
         {dailyGoals.map((goal, index) => (
           <View key={index} style={styles.goalItem}>
-            <TouchableOpacity onPress={() => toggleDailyGoal(index)}>
-            </TouchableOpacity>
+            <TouchableOpacity onPress={() => toggleDailyGoal(index)}></TouchableOpacity>
             <Text>{goal.task}</Text>
           </View>
         ))}
       </ScrollView>
 
-              {/* Display User's Rank in Leaderboard */}
+      {/* Display User's Rank in Leaderboard */}
       <Text style={styles.subHeader}>{getUserRank()}</Text>
     </View>
   );
@@ -188,4 +199,4 @@ const styles = StyleSheet.create({
   },
 });
 
-export default index;
+export default Index;

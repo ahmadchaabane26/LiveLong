@@ -42,6 +42,12 @@ export default function ProfileModal() {
           <Text style={styles.settingsText}>Settings</Text>
           <Ionicons name="chevron-forward" size={20} color="#333" />
         </TouchableOpacity>
+        
+        {/* Journal Button */}
+        <TouchableOpacity onPress={() => router.push("/modal/Journal")} style={styles.JournalButton}>
+          <Text style={styles.addFriendText}>View Journals</Text>
+          <Ionicons name="chevron-forward" size={20} color="#333" />
+        </TouchableOpacity>
 
         {/* Add Friend Button */}
         <TouchableOpacity onPress={() => router.push("/modal/friends")} style={styles.addFriendButton}>
@@ -97,6 +103,13 @@ const styles = StyleSheet.create({
   settingsText: {
     fontSize: 18,
     color: "#333",
+  },
+  JournalButton: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    width: "100%",
+    marginVertical: 10,
   },
   addFriendButton: {
     flexDirection: "row",
